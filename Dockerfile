@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:17.10
+FROM ikeyasu/cuda:9.0-devel-ubuntu17.10
+
 MAINTAINER ikeyasu <ikeyasu@gmail.com>
 
 # Container configuration
