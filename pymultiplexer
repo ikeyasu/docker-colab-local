@@ -1,0 +1,48 @@
+#!/bin/bash
+# -*- mode: bash -*-
+#
+# Wrapper for multiplexing a python or pip to use the same version as the most
+# recent caller in its process hierarchy.
+#
+# This lets us have a single command (pip/python) work for both python2 and
+# python3 notebooks, eg
+#   !pip install ...
+# will install for the version of python currently in use.
+
+# This is the default: assume python2.
+SUFFIX=2
+
+# We know *this* process isn't python, so we start with the parent.
+NEXT_PID=${PPID}
+
+while true; do
+  # Determine where to look up the parent of this process (if it exists).
+  PID_STAT="/proc/${NEXT_PID}/stat"
+  if [[ ! -f ${PID_STAT} ]]; then
+    break
+  fi
+  
+  # Figure out the parent PID: proc(5) says this
+  # is the fourth field in /proc/${NEXT_PID}/stat.
+  PARENT_PID=$(cut -d\  -f4 <${PID_STAT})
+  PARENT_EXE="/proc/${PARENT_PID}/exe"
+  if [[ ! -f ${PARENT_EXE} ]]; then
+    break
+  fi
+  
+  # We want to know the real filename, so resolve any symlinks.
+  CALLER=$(readlink -fnq ${PARENT_EXE})
+  if [[ ${CALLER} == *"/bin/python3"* ]]; then
+    SUFFIX=3
+    break
+  elif [[ ${CALLER} == *"/bin/python2"* ]]; then
+    SUFFIX=2
+    break
+  fi
+
+  # Repeat with the parent process.
+  NEXT_PID=${PARENT_PID}
+done
+
+COMMAND="$(basename $0)${SUFFIX}"
+exec "${COMMAND}" "$@"
