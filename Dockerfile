@@ -73,14 +73,13 @@ RUN apt-get update && \
         ttf-liberation \
         unzip \
         wget \
-        zip \
-        && \
-    mkdir -p /tools && \
+        zip && \
+    mkdir -p /tools
 
 # Setup Google Cloud SDK
 # Also apply workaround for gsutil failure brought by this version of Google Cloud.
 # (https://code.google.com/p/google-cloud-sdk/issues/detail?id=538) in final step.
-    wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \
+RUN wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \
     unzip -qq google-cloud-sdk.zip -d tools && \
     rm google-cloud-sdk.zip && \
     tools/google-cloud-sdk/install.sh --usage-reporting=false \
@@ -88,15 +87,15 @@ RUN apt-get update && \
     tools/google-cloud-sdk/bin/gcloud -q components update \
         gcloud core bq gsutil compute preview alpha beta && \
     # disable the gcloud update message
-    tools/google-cloud-sdk/bin/gcloud config set component_manager/disable_update_check true && \
+    tools/google-cloud-sdk/bin/gcloud config set component_manager/disable_update_check true
 
 # Fetch tensorflow wheels.
-    gsutil cp gs://colab-tensorflow/2018-03-01T15:50:49-08:00/*whl / && \
-    alias pip2=pip && for v in 2 3; do for f in /*tensorflow*-cp${v}*.whl; do pip${v} download -d /tf_deps $f; done; done && unalias pip2 && \
+RUN gsutil cp gs://colab-tensorflow/2018-03-01T15:50:49-08:00/*whl / && \
+    alias pip2=pip && for v in 2 3; do for f in /*tensorflow*-cp${v}*.whl; do pip${v} download -d /tf_deps $f; done; done && unalias pip2
 
 # Update pip and pip3 to avoid noisy warnings for users, and install wheel for
 # use below.
-    pip3 install --upgrade pip wheel && \
+RUN pip3 install --upgrade pip wheel && \
     pip2 install --upgrade pip wheel
 
 # Add a global pip.conf to avoid warnings on `pip list` and friends.
@@ -111,8 +110,8 @@ COPY pip.conf /etc/
 # python2 ones, so that installed scripts still default to python2.
 COPY requirements.txt /
 RUN pip2 install -U http://wheels.scipy.org/subprocess32-3.5.0-cp27-cp27mu-manylinux1_x86_64.whl
-RUN pip3 install -U --upgrade-strategy only-if-needed --no-cache-dir -r /requirements.txt && \
-    pip2 install -U --upgrade-strategy only-if-needed --no-cache-dir -r /requirements.txt
+RUN pip3 install -U --upgrade-strategy only-if-needed --ignore-installed --no-cache-dir -r /requirements.txt && \
+    pip2 install -U --upgrade-strategy only-if-needed --ignore-installed --no-cache-dir -r /requirements.txt
 
 # Set up Jupyter kernels for python2 and python3.
 RUN python3 -m ipykernel install
@@ -127,7 +126,7 @@ RUN python2 -m ipykernel install
 # Set our locale to en_US.UTF-8.
 RUN apt-get install -y locales && \
     locale-gen en_US.UTF-8 && \
-    update-locale LANG=en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
 
 # Build a copy of the datalab node app.
 #    git clone https://github.com/googlecolab/backend-container /backend-container && \
@@ -150,7 +149,7 @@ RUN apt-get install -y locales && \
 #    /tools/node/bin/npm install -g forever && \
 
 # Clean up
-    apt-get autoremove -y && \
+RUN apt-get autoremove -y && \
     rm -rf /tmp/* && \
     rm -rf /root/.cache/* && \
     cd /
